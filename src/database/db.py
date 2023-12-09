@@ -1,34 +1,34 @@
-import contextlib
-from sqlalchemy.orm import DeclarativeBase
+import configparser
+import pathlib
 
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-
-from src.conf.config import config
-
-
-class DatabaseSessionManager:
-    def __init__(self, url: str):
-        self._engine: AsyncEngine | None = create_async_engine(url)
-        self._session_maker: async_sessionmaker = async_sessionmaker(autoflush=False, autocommit=False,
-                                                                     bind=self._engine)
-
-    @contextlib.asynccontextmanager
-    async def session(self):
-        if self._session_maker is None:
-            raise Exception("Session is not initialized")
-        session = self._session_maker()
-        try:
-            yield session
-        except Exception as err:
-            print(err)
-            await session.rollback()
-        finally:
-            await session.close()
+from fastapi import HTTPException, status
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import SQLAlchemyError
 
 
-sessionmanager = DatabaseSessionManager(config.DB_URL)
+file_config = pathlib.Path(__file__).parent.parent.joinpath('conf/config.ini')
+config = configparser.ConfigParser()
+config.read(file_config)
+
+username = config.get('DB', 'USER')
+password = config.get('DB', 'PASSWORD')
+domain = config.get('DB', 'DOMAIN')
+port = config.get('DB', 'PORT')
+database = config.get('DB', 'DB_NAME')
+
+URI = f'postgresql://{username}:{password}@{domain}:{port}/{database}'
+
+engine = create_engine(URI, echo=True)
+DBSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
-async def get_db():
-    async with sessionmanager.session() as session:
-        yield session
+def get_db():
+    db = DBSession()
+    try:
+        yield db
+    except SQLAlchemyError as err:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(err))
+    finally:
+        db.close()
