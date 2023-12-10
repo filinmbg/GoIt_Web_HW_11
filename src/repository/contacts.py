@@ -64,7 +64,7 @@ async def find_contact_by_lastname(contact_lastname: str, db: Session):
     return contacts
 
 
-async def find_contacts_birthday(db: Session):
+async def search_birthday(param: str, db: Session):
     today = date.today()
     end_date = today + timedelta(days=7)
     birthday_list = []
