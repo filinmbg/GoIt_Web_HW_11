@@ -83,9 +83,11 @@ async def find_contact_by_lastname(contact_lastname: str, db: Session = Depends(
 
 
 
-@router.get("/birthday", response_model=List[ContactResponse])
-async def find_contacts_birthday(db: Session = Depends(get_db)):
-    contacts = await repository_contacts.search_birthday(db)
+
+@router.get("/birthday/{days}", status_code=status.HTTP_200_OK, response_model=List[ContactResponse])
+async def find_contacts_birthday(days: int, db: Session = Depends(get_db)):
+    contacts = await repository_contacts.search_birthday(days=days, db=db)
+    print(f"{contacts=}")
     if contacts is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact is not found")
     return contacts

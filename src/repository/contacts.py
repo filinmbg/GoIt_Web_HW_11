@@ -64,13 +64,15 @@ async def find_contact_by_lastname(contact_lastname: str, db: Session):
     return contacts
 
 
-async def search_birthday(param: str, db: Session):
+async def search_birthday(days, db: Session):
+    print(f"is searching")
     today = date.today()
-    end_date = today + timedelta(days=7)
+    end_date = today + timedelta(days=days)
     birthday_list = []
     contacts = db.query(Contact).all()
+    print(f"{len(contacts)}")
     for contact in contacts:
-        current_year_birthdays = contact.date_of_birth.replace(year=today.year)
+        current_year_birthdays = contact.birthday.replace(year=today.year).date() # тут зверніть увагу в моделі саме поле birthday а не date_of_birth
         if today <= current_year_birthdays <= end_date:
             birthday_list.append(contact)
     return birthday_list
